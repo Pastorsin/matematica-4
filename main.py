@@ -1,20 +1,18 @@
 from model import Model
+
 from scipy.optimize import curve_fit
+
+from scipy import stats
+
 import pandas as pd
-import matplotlib.pyplot as plot
+
 import statsmodels.api as sm
 
+import numpy as np
 
-def graph(model):
-    fig, axis = plot.subplots()
+import plot
 
-    axis.set_title(model.name)
-    axis.set_xlabel("Medida del cráneo en cm.")
-    axis.set_ylabel("Peso en kg.")
-    axis.plot(model.x, model.y, marker="o", linestyle='None', color="red")
-    axis.plot(model.x, model.regression_line(), linestyle="-", color="blue")
-
-    plot.show()
+import sys
 
 
 def create_model(model_name):
@@ -23,8 +21,10 @@ def create_model(model_name):
     df = pd.read_csv(f"{model_name}.csv", names=["mcd", "peso"], header=0)
     x, y = df.mcd.to_list(), df.peso.to_list()
 
-    model = Model(model_name, x, y)
+    return Model(model_name, x, y)
 
+
+def model_manual(model):
     print("-" * 10)
     print("MUESTRA")
     print("-" * 10)
@@ -51,17 +51,25 @@ def create_model(model_name):
 
     print(f"y = {model.beta_0():.2f} + {model.beta_1():.2f}x")
 
-    return model
+    print("-" * 10)
+    print(f"R2: {model.r_squared():.3f}")
+    print("-" * 10)
+
+    print("-" * 10)
+    print(f"INTERVALOS DE CONFIANZA: {model.r_squared():.3f}")
+    print("-" * 10)
+
+    ic = model.confidence_interval_beta_1(0.95)
+
+    print(f"β1 IC 95%: [{ic[0]:.2f}, {ic[1]:.2f}]")
+
+    ic = model.confidence_interval_beta_1(0.99)
+    print(f"β1 IC 99%: [{ic[0]:.2f}, {ic[1]:.2f}]")
+
+    print(f"t={model.test_t():.2f}")
 
 
-def main():
-    print("Manualmente:")
-
-    model = create_model("raza_b")
-
-    print("=" * 40)
-    print("Con curve_fit:")
-
+def model_curvefit(model):
     param_opt, param_cov = curve_fit(
         lambda x, beta_0, beta_1: beta_0 + beta_1 * x,
         model.x,
@@ -73,13 +81,45 @@ def main():
     print(f'β1: {beta_1:.2f}')
     print(f'β0: {beta_0:.2f}')
 
-    print("=" * 40)
-    print("Con statsmodels:")
 
+def model_statsmodels(model):
     model_fit = sm.OLS(model.y, sm.add_constant(model.x)).fit()
     print(model_fit.summary())
 
-    # graph(model)
+    ic = model_fit.conf_int(0.05)[1]
+    print(f"β1 Intervalo confianza 95%: [{ic[0]:.2f}, {ic[1]:.2f}]")
+
+    ic = model_fit.conf_int(0.01)[1]
+    print(f"β1 Intervalo confianza 99%: [{ic[0]:.2f}, {ic[1]:.2f}]")
+
+    print(f"β1 P-Valor: {model_fit.pvalues[1]:.8f}")
+
+
+def model_numpy(model):
+    print(f"R2: {np.corrcoef(model.x, model.y)[0][1] ** 2:.3f}")
+
+
+def main():
+    model = create_model(sys.argv[1])
+
+    print("=" * 40)
+    print("Manualmente:")
+    model_manual(model)
+
+    print("=" * 40)
+    print("Con curve_fit:")
+    model_curvefit(model)
+
+    print("=" * 40)
+    print("Con statsmodels:")
+    model_statsmodels(model)
+
+    print("=" * 40)
+    print("Con numpy:")
+    model_numpy(model)
+
+    # plot.plot_model(model)
+    # plot.plot_residuos(model)
 
 
 if __name__ == '__main__':
