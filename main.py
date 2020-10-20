@@ -2,8 +2,6 @@ from model import Model
 
 from scipy.optimize import curve_fit
 
-from scipy import stats
-
 import pandas as pd
 
 import statsmodels.api as sm
@@ -99,8 +97,8 @@ def model_numpy(model):
     print(f"R2: {np.corrcoef(model.x, model.y)[0][1] ** 2:.3f}")
 
 
-def main():
-    model = create_model(sys.argv[1])
+def solve(model_name):
+    model = create_model(model_name)
 
     print("=" * 40)
     print("Manualmente:")
@@ -118,8 +116,13 @@ def main():
     print("Con numpy:")
     model_numpy(model)
 
-    # plot.plot_model(model)
-    # plot.plot_residuos(model)
+    plot.plot_model(model)
+    plot.plot_residuos(model)
+
+
+def main():
+    solve("raza_a")
+    solve("raza_b")
 
 
 if __name__ == '__main__':
